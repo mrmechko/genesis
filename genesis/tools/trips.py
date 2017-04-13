@@ -3,17 +3,18 @@ from diesel.ontology import load_ontology
 
 import os
 
-BASEPATH = os.environ.get("TRIPS_XML_PATH", None)
+TRIPSPATH = os.environ.get("TRIPS_BASE_PATH", None)
 
-if BASEPATH is None:
+if TRIPSPATH is None:
     raise FileNotFoundError(
-        "Please point $TRIPS_XML_PATH to your local copy of http://github.com/mrmechko/flaming-tyrion"
+        "Please point $TRIPS_BASE_PATH to your local copy of TRIPS"
     )
 
-lexpath = os.path.join(BASEPATH, "lexicon", "data")
-dslpath = os.path.join(BASEPATH, "lexicon", "dsl")
+lexpath = os.path.join(TRIPSPATH, "etc", "XMLTrips", "lexicon", "data")
+templpath = os.path.join(TRIPSPATH, "src", "LexiconManager", "Data", "templates")
 
-lexicon = load_lexicon(lexpath, dslpath)
+
+lexicon = load_lexicon(lexpath, templpath)
 ontology = load_ontology(lexpath)
 
 

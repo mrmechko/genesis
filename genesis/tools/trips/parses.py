@@ -181,7 +181,7 @@ def parse_sentences(sentences, trips_base=None, parameters=None, port=None, use_
                 result[m] = r
             sentences = [s for s in sentences if s not in result]
             random.shuffle(sentences)  # shuffle the order in case there's just one particular guy failing
-            print("parsed", len(random), "out of", total)
+            print("parsed", len(result), "out of", total)
             attempts += 1
             port += 1
             sleep(10)

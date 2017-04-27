@@ -8,11 +8,9 @@ if __name__ == '__main__':
             packages=find_packages(exclude=['test']),
             install_requires=[
                 'spacy==1.7.0',
-                'tripsmodule==1.1.0',
-                'diesel>=1.0.0',
                 'progressbar2==3.16.0'
                 ],
-            dependence_links=[
+            dependency_links=[
                 "git+https://github.com/mrmechko/tripsmodule@v1.1.0",
                 "git+https://github.com/mrmechko/diesel-python"
                 ]

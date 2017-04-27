@@ -49,8 +49,6 @@ class GetParse(TripsModule):
 
     def receive_tell(self, msg, content):
         verb = content[0].to_string().lower()
-        if verb != "skelscore":
-            print(verb)
         if verb == "skelscore":
             content = msg.get_parameter(":content")
             score = content.get_keyword_arg(":score")
@@ -67,7 +65,6 @@ class GetParse(TripsModule):
             if self.complete():
                 self.exit(0)
         elif verb == "new-speech-act-hyps":
-            print("found sah")
             self.speechacthyps = content.to_string()
             if self.complete():
                 self.exit(0)
@@ -138,18 +135,16 @@ class tripsparser:
     def __enter__(self):
         import subprocess
         from time import sleep
-        command = "{}/bin/trips-step -logdir {}/logs -port {}".format(self.trips_base, self.trips_base, self.port)
-        if self.parameters:
-            self.parameters.port = self.port  # make sure the right port is set for parameters
-        self.port += 1  # make sure if it is reused you don't use the same port again
+        command = "{}/bin/trips-step -logdir {}/logs -port {} -display none".format(self.trips_base, self.trips_base, self.port)
         self.parser = subprocess.Popen(command, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        sleep(60)
+        sleep(30)
         if self.parameters:
+            parameters = self.parameters(self.port)
             sent = False
             while not sent:
                 try:
-                    self.parameters.start()
-                    sleep(30)
+                    parameters.start()
+                    sleep(15)
                     sent = True
                 except:
                     print("retrying in 5s")
@@ -169,19 +164,27 @@ def parse_sentences(sentences, trips_base=None, parameters=None, port=None, use_
     :param use_timeout: whether or not to use a timeout
     :return: a hash of sentences mapped to their outputs
     """
+    from time import sleep
+    if not port:
+        port = 6300
     runner = run_list_of_sentences
     if use_timeout:
         runner = run_list_of_sentences_with_timeout
     attempts = 0
+    total = len(sentences)
     result = {}
     while sentences and attempts < 5:  # re run the parser up to 5 times or until all sentences are parsed
         with tripsparser(trips_base, port, parameters):
+            print("attempt", attempts+1)
             mod = runner(sentences, port)
             for m, r in mod.items():
                 result[m] = r
             sentences = [s for s in sentences if s not in result]
             random.shuffle(sentences)  # shuffle the order in case there's just one particular guy failing
+            print("parsed", len(random), "out of", total)
             attempts += 1
+            port += 1
+            sleep(10)
     return result
 
 
@@ -192,6 +195,11 @@ def run_list_of_sentences(sentences, port=None, id_offset=0):
     results = {}
     id = id_offset
     cons_num_incomplete = 0
+    warmup = ["This is a warmup sentence", "As is this one"]
+    for s in warmup:
+        gp = GetParse(s, id=-1, port=port)
+        gp.start()
+        
     for sentence in sentences:
         gp = GetParse(sentence, id=id, port=port)
         gp.start()
@@ -214,22 +222,23 @@ def run_list_of_sentences_with_timeout(sentences, port=None, id_offset=0):
     results = {}
     id = id_offset
     cons_num_incomplete = 0
+    warmup = ["This is a warmup sentence", "As is this one"]
+    for s in warmup:
+        gp = GetParse(s, id=-1, port=port)
+        gp.start()
+ 
     for sentence in sentences:
         gp = GetParse(sentence, id=id, port=port)
         try:
             with timeout(seconds=30):
-                print("parsing: {}".format(sentence))
                 gp.start()
-                print("started id {}".format(id))
                 if gp.complete():
                     results[sentence] = gp
                     cons_num_incomplete = 0
                 else:
-                    print(gp.sentence + " was incomplete")
                     cons_num_incomplete += 1
         except TimeoutError as e:
             gp.exit(0)  # kill the agent
-            print("sentence {} timed out".format(id))
         id += 1
         if cons_num_incomplete > 1:
             return results

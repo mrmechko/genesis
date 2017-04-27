@@ -2,12 +2,12 @@ from tripsmodule.trips_module import TripsModule
 from tripsmodule.kqml_performative import KQMLPerformative
 
 
-def basic_experiment(datafile, adjustment=None, port=None):
-    return TripsParameters(datafile=datafile, adjustment=adjustment, port=port)
+def basic_experiment(datafile, adjustment=None):
+    return lambda port: TripsParameters(datafile=datafile, adjustment=adjustment, port=port)
 
 
-def no_skeleton_score(port=None):
-    return TripsParameters(pred_type="NullScore", port=port)
+def no_skeleton_score():
+    return lambda port: TripsParameters(pred_type="NullScore", port=port)
 
 
 class TripsParameters(TripsModule):
@@ -55,9 +55,9 @@ class TripsParameters(TripsModule):
             "(request :receiver SKELETONSCORE :content (selection-method {}))".format(self.lib_type)
         ))
         if self.datafile:
-        self.send(KQMLPerformative.from_string(
-            "(request :receiver SKELETONSCORE :content (use-skeleton-data {}))".format(self.datafile)
-        ))
+            self.send(KQMLPerformative.from_string(
+                "(request :receiver SKELETONSCORE :content (use-skeleton-data {}))".format(self.datafile)
+            ))
         if self.adjustment:
             self.send(KQMLPerformative.from_string(
                 "(request :receiver SKELETONSCORE :content (adjustment-factor {}))".format(self.adjustment)

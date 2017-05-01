@@ -1,6 +1,7 @@
 from tripsmodule.trips_module import TripsModule
 from tripsmodule.kqml_performative import KQMLPerformative
 import random
+import tqdm
 
 
 class GetParse(TripsModule):
@@ -155,7 +156,7 @@ class tripsparser:
         self.parser = None
 
 
-def parse_sentences(sentences, trips_base=None, parameters=None, port=None, use_timeout=False):
+def parse_sentences(sentences, trips_base=None, parameters=None, port=None, use_timeout=False, max_attempts=5):
     """
     :param sentences: sentences to parse
     :param trips_base: where is trips
@@ -172,19 +173,26 @@ def parse_sentences(sentences, trips_base=None, parameters=None, port=None, use_
         runner = run_list_of_sentences_with_timeout
     attempts = 0
     total = len(sentences)
+    random.shuffle(sentences)
+    bar = tqdm.tqdm(total=total, desc="attempt 1")
     result = {}
-    while sentences and attempts < 5:  # re run the parser up to 5 times or until all sentences are parsed
+    while sentences and attempts < max_attempts: 
         with tripsparser(trips_base, port, parameters):
-            print("attempt", attempts+1)
+            bar.set_description("attempt "+str(attempts+1)+":"+str(len(sentences)))
             mod = runner(sentences, port)
+            last = len(result)
             for m, r in mod.items():
                 result[m] = r
+            bar.update(len(result) - last)  # want the positive value
             sentences = [s for s in sentences if s not in result]
-            random.shuffle(sentences)  # shuffle the order in case there's just one particular guy failing
-            print("parsed", len(result), "out of", total)
+            if len(sentences):
+                failure = sentences.pop(0)
+                print("dropping suspected failure:", failure)
+                random.shuffle(sentences)  # shuffle the order in case there's just one particular guy failing
             attempts += 1
             port += 1
             sleep(10)
+    bar.close()
     return result
 
 
@@ -199,8 +207,10 @@ def run_list_of_sentences(sentences, port=None, id_offset=0):
     for s in warmup:
         gp = GetParse(s, id=-1, port=port)
         gp.start()
-        
-    for sentence in sentences:
+
+    bar = tqdm.tqdm(sentences, desc="parsing sentences")
+    bar.refresh()
+    for sentence in bar:
         gp = GetParse(sentence, id=id, port=port)
         gp.start()
         if gp.complete():
@@ -208,10 +218,13 @@ def run_list_of_sentences(sentences, port=None, id_offset=0):
             cons_num_incomplete = 0
         else:
             cons_num_incomplete += 1
+            bar.write("sentence failed")
         if cons_num_incomplete > 1:
+            bar.close()
             return results
         id += 1
         sleep(5)  # added a short sleep to avoid error 9 socket errors
+    bar.close()
     return results
 
 
@@ -226,8 +239,8 @@ def run_list_of_sentences_with_timeout(sentences, port=None, id_offset=0):
     for s in warmup:
         gp = GetParse(s, id=-1, port=port)
         gp.start()
- 
-    for sentence in sentences:
+    bar = tqdm.tqdm(sentences, desc="parsing sentences") 
+    for sentence in bar:
         gp = GetParse(sentence, id=id, port=port)
         try:
             with timeout(seconds=30):
@@ -235,14 +248,18 @@ def run_list_of_sentences_with_timeout(sentences, port=None, id_offset=0):
                 if gp.complete():
                     results[sentence] = gp
                     cons_num_incomplete = 0
+                    bar.set_description("parsing sentences")
                 else:
                     cons_num_incomplete += 1
+                    bar.set_description("stall count:" + str(cons_num_incomplete))
         except TimeoutError as e:
             gp.exit(0)  # kill the agent
         id += 1
         if cons_num_incomplete > 1:
+            bar.close()
             return results
         sleep(5)  # added a short sleep to avoid error 9 socket errors
+    bar.close()
     return results
 
 

@@ -33,7 +33,6 @@ class TripsParameters(TripsModule):
 
     def init(self):
         self.name = "EParameters-{}-{}-{}".format(self.pred_type, self.lib_type, self.port)
-        print(self.name)
         TripsModule.init(self)
         self.send(KQMLPerformative.from_string(
             "(subscribe :content (tell &key :content(use-skeleton-data . *)))"

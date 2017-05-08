@@ -156,7 +156,7 @@ class tripsparser:
         self.parser = None
 
 
-def parse_sentences(sentences, trips_base=None, parameters=None, port=None, use_timeout=False, max_attempts=5):
+def parse_sentences(sentences, trips_base=None, parameters=None, port=None, use_timeout=False, max_attempts=5, parallel=False):
     """
     :param sentences: sentences to parse
     :param trips_base: where is trips
@@ -174,16 +174,23 @@ def parse_sentences(sentences, trips_base=None, parameters=None, port=None, use_
     attempts = 0
     total = len(sentences)
     random.shuffle(sentences)
-    bar = tqdm.tqdm(total=total, desc="attempt 1")
+    if not parallel:
+        bar = tqdm.tqdm(total=total, desc="attempt 1")
+    else:
+        print("bar disabled, running in parallel")
     result = {}
     while sentences and attempts < max_attempts: 
         with tripsparser(trips_base, port, parameters):
-            bar.set_description("attempt "+str(attempts+1)+":"+str(len(sentences)))
-            mod = runner(sentences, port)
+            if not parallel:
+                bar.set_description("attempt "+str(attempts+1)+":"+str(len(sentences)))
+            mod = runner(sentences, port, parallel=parallel)
             last = len(result)
             for m, r in mod.items():
                 result[m] = r
-            bar.update(len(result) - last)  # want the positive value
+            if not parallel:
+                bar.update(len(result) - last)  # want the positive value
+            else:
+                print(len(result), "out of", total, "completed")
             sentences = [s for s in sentences if s not in result]
             if len(sentences):
                 failure = sentences.pop(0)
@@ -192,11 +199,12 @@ def parse_sentences(sentences, trips_base=None, parameters=None, port=None, use_
             attempts += 1
             port += 1
             sleep(10)
-    bar.close()
+    if not parallel:
+        bar.close()
     return result
 
 
-def run_list_of_sentences(sentences, port=None, id_offset=0):
+def run_list_of_sentences(sentences, port=None, id_offset=0, parallel=False):
     if port is None:
         port = 6200
     from time import sleep
@@ -208,8 +216,10 @@ def run_list_of_sentences(sentences, port=None, id_offset=0):
         gp = GetParse(s, id=-1, port=port)
         gp.start()
 
-    bar = tqdm.tqdm(sentences, desc="parsing sentences")
-    bar.refresh()
+    if not parallel:
+        bar = tqdm.tqdm(sentences, desc="parsing sentences")
+    else:
+        bar = sentences
     for sentence in bar:
         gp = GetParse(sentence, id=id, port=port)
         gp.start()
@@ -218,17 +228,20 @@ def run_list_of_sentences(sentences, port=None, id_offset=0):
             cons_num_incomplete = 0
         else:
             cons_num_incomplete += 1
-            bar.write("sentence failed")
+            if not parallel:
+                bar.write("sentence failed")
         if cons_num_incomplete > 1:
-            bar.close()
+            if not parallel:
+                bar.close()
             return results
         id += 1
         sleep(5)  # added a short sleep to avoid error 9 socket errors
-    bar.close()
+    if not parallel:
+        bar.close()
     return results
 
 
-def run_list_of_sentences_with_timeout(sentences, port=None, id_offset=0):
+def run_list_of_sentences_with_timeout(sentences, port=None, id_offset=0, parallel=False):
     if port is None:
         port = 6200
     from time import sleep
@@ -239,7 +252,10 @@ def run_list_of_sentences_with_timeout(sentences, port=None, id_offset=0):
     for s in warmup:
         gp = GetParse(s, id=-1, port=port)
         gp.start()
-    bar = tqdm.tqdm(sentences, desc="parsing sentences") 
+    if not parallel:
+        bar = tqdm.tqdm(sentences, desc="parsing sentences")
+    else:
+        bar = sentences
     for sentence in bar:
         gp = GetParse(sentence, id=id, port=port)
         try:
@@ -248,18 +264,22 @@ def run_list_of_sentences_with_timeout(sentences, port=None, id_offset=0):
                 if gp.complete():
                     results[sentence] = gp
                     cons_num_incomplete = 0
-                    bar.set_description("parsing sentences")
+                    if not parallel:
+                        bar.set_description("parsing sentences")
                 else:
                     cons_num_incomplete += 1
-                    bar.set_description("stall count:" + str(cons_num_incomplete))
+                    if not parallel:
+                        bar.set_description("stall count:" + str(cons_num_incomplete))
         except TimeoutError as e:
             gp.exit(0)  # kill the agent
         id += 1
         if cons_num_incomplete > 1:
-            bar.close()
+            if not parallel:
+                bar.close()
             return results
         sleep(5)  # added a short sleep to avoid error 9 socket errors
-    bar.close()
+    if not parallel:
+        bar.close()
     return results
 
 

@@ -56,11 +56,28 @@ def lookup_token_from_wordnet(token):
     return collected
 
 
-def lookup_all(token):
+def lookup_all(token, types_only=False):
     lex = lookup_token_from_lexicon(token)
     wnl = lookup_token_from_wordnet(token)
     wnl = WNLexItem.collect(wnl)
+    if types_only:
+        lex = [x.wclass.onttype for x in lex]
+        wnl = [x[1].wclass.onttype for x in wnl]
+        return set(lex + wnl)
     return lex, wnl
+
+
+def transform(sentence):
+    sent = nlp(sentence)
+    res = []
+    for s in sent:
+        l = lookup_all(s, types_only=True)
+        if l:
+            res.append("ONT_" + "_".join(l))
+        else:
+            res.append(s.text)
+    return " ".join(res)
+
 
 
 class LexItem:

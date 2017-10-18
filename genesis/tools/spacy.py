@@ -10,9 +10,9 @@ def deep_syntax(token):
     tags = copy.deepcopy(tag_map.get(token.tag_, None))
     if tags is None:
         return {}
-    if "other" in tags:
-        other = tags["other"]
-        del tags["other"]
+    if "Other" in tags:
+        other = tags["Other"]
+        del tags["Other"]
         for k in other:
             tags[k] = other[k]
     # convert all tags to strings

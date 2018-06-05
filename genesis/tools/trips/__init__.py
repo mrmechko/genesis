@@ -1,4 +1,4 @@
-__all__ = ['lexicon', 'ontology']
+__all__ = ['lexicon', 'ontology', "lexlookup", "ontlookup", "weighted_lookup"]
 
-from .trips import lexicon, ontology
+from .trips import lexicon, ontology, lexlookup, ontlookup, weighted_lookup
 

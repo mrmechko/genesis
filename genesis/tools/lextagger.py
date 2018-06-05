@@ -2,6 +2,10 @@ from .spacy import nlp, deep_syntax
 from .trips import lexicon, ontology
 from .symbols import get_pos, guess_cat
 
+from nltk.corpus import stopwords
+
+sw_en = set(stopwords.words('english'))
+
 
 def normalize_spacy_to_trips(token):
     conversions = [("’", "^"), ("'", "^")]
@@ -12,7 +16,7 @@ def normalize_spacy_to_trips(token):
 
 def lookup_token_from_lexicon(token, surrogate=None):
     ds = deep_syntax(token)
-    tok = normalize_spacy_to_trips(token.text)
+    tok = normalize_spacy_to_trips(token.text.lower())
     g_cat = guess_cat(tok, ds)
     g_pos = get_pos(tok, ds)
     if surrogate:
@@ -40,25 +44,27 @@ def lookup_token_from_lexicon(token, surrogate=None):
     return collected
 
 
-def lookup_token_from_wordnet(token):
+def lookup_token_from_wordnet(token, wndepth=3):
     ds = deep_syntax(token)
-    tok = normalize_spacy_to_trips(token.text)
+    tok = normalize_spacy_to_trips(token.text.lower())
     g_pos = get_pos(token, ds)
     g_pos = [p for p in g_pos if p in {"n", "v", "adj", "adv"}]
     if not g_pos:  # not a wordnet pos so ignore
         return []
     collected = []
     for p in g_pos:
-        ots = [n for n in ontology.lookup(tok, wordnet_only=True, pos=p, with_hierarchy=True)]
+        ots = [n for n in ontology.lookup(tok, max_depth=wndepth, wordnet_only=True, pos=p, with_hierarchy=True)]
         for t in ots:
             for t_ in t[0]:
                 collected.append(WNLexItem(token, t_, p, t[1]))
     return collected
 
 
-def lookup_all(token, types_only=False):
+def lookup_all(token, types_only=False, wndepth=3):
     lex = lookup_token_from_lexicon(token)
-    wnl = lookup_token_from_wordnet(token)
+    wnl = lookup_token_from_wordnet(token, wndepth=wndepth)
+    if len(lex) + len(wnl) == 0:
+        wnl = lookup_token_from_wordnet(token, wndepth=-1)
     wnl = WNLexItem.collect(wnl)
     if types_only:
         lex = [x.wclass.onttype for x in lex]
@@ -67,13 +73,26 @@ def lookup_all(token, types_only=False):
     return lex, wnl
 
 
-def transform(sentence):
+def transform(sentence, wndepth=3):
     sent = nlp(sentence)
     res = []
     for s in sent:
-        l = lookup_all(s, types_only=True)
+        if s.text.lower() in sw_en:
+            res.append(s.text)
+            continue
+        l = lookup_all(s, types_only=True, wndepth=3)
         if l:
+            rem = set()
+            for x in l:
+                t = ontology.get(x)
+                if t and t.parent in l:
+                    rem.add(x)
+            for x in rem:
+                l.remove(x)
             res.append("ONT_" + "_".join(l))
+        elif s.ent_type_:
+                # squelch numbers
+                res.append("ENT_{}".format(s.ent_type_))
         else:
             res.append(s.text)
     return " ".join(res)
@@ -163,116 +182,3 @@ class WNLexItem:
     def __repr__(self):
         return "wn:"+str(self)
 
-
-# class LexicalInfo:
-#     def __init__(self, token):
-#         self.token = token
-#         self.guess_cats = []
-#         self.guess_pos = []
-#         self.lex_cats = []
-#         self.lex_pos = []
-#         self.lex_words = []
-#
-#         self._guess_lexical_tags()
-#
-#         self.filt_cat = self._filter_cats()
-#         self.filt_pos = self._filter_pos()
-#         self.hypotheses = self._filter_lex_words()
-#         self.wnhyps = []
-#         self.generate_wordnet_hypotheses()
-#
-#     def describe(self):
-#         types = set()
-#         for t in self.hypotheses:
-#             for c in t.lexclasses:
-#                 types.add(c)
-#         description = self.token.text
-#
-#     def verbose(self):
-#         types = set()
-#         for t in self.hypotheses:
-#             for c in t.lexclasses:
-#                 types.add(c)
-#         templs = [[x.name for x in t.templates] for t in types]
-#         types = [t.onttype for t in types]
-#
-#         return """
-#         text: {}
-#         spacy_lem: {}
-#         inferred_cats: {}
-#         possible_cats: {}
-#         inferred_pos: {}
-#         possible_pos: {}
-#         filtered_cats: {}
-#         filtered_poss: {}
-#         possible_lexs: {}
-#         hypotheses: {}
-#         templates: {}
-#         onttypes: {}
-#         wnhyps: {}
-#         """.format(
-#             self.token.text,
-#             self.token.lemma_,
-#             self.guess_cats,
-#             self.lex_cats,
-#             self.guess_pos,
-#             self.lex_pos,
-#             self.filt_cat,
-#             self.filt_pos,
-#             self.lex_words,
-#             self.hypotheses,
-#             templs,
-#             types,
-#             [".".join(x) for x in self.wnhyps]
-#         )
-#
-#     def generate_wordnet_hypotheses(self):
-#         self.wnhyps = []
-#         for p in self.filt_pos:
-#             types = [t.name for t in ontology.lookup(self.token.lemma_, wordnet_only=True, max_depth=3, pos=p)]
-#             for t in types:
-#                 self.wnhyps.append((t, p))
-#
-#     def _filter_cats(self):
-#         cats = list(set(self.guess_cats).intersection(set(self.lex_cats)))
-#         if cats:
-#             return cats
-#         else:
-#             return self.lex_cats[:]
-#
-#     def _filter_pos(self):
-#         pos = list(set(self.guess_pos).intersection(set(self.lex_pos)))
-#         if pos:
-#             return pos
-#         else:
-#             return self.lex_pos[:]
-#
-#     def _filter_lex_words(self):
-#         words = [w for w in self.lex_words if w.pos in self.filt_pos]
-#         words_cat = [w for w in words if any([w.has_cat(c) for c in self.filt_cat])]
-#         if words_cat:
-#             return words_cat
-#         if words:
-#             return words
-#         return self.lex_words[:]
-#
-#     def _guess_lexical_tags(self):
-#         """Get lexical tags for a token"""
-#         syn = deep_syntax(self.token)
-#         tok = normalize_spacy_to_trips(self.token.text)
-#         cats = guess_cat(tok, syn)
-#         poss = get_pos(tok, syn)
-#
-#         self.guess_cats = cats
-#         self.guess_pos = poss
-#
-#         lex_morph = lexicon.morph(tok, detailed=True)
-#         self.lex_cats = [l.cat for l in lex_morph]
-#         self.lex_words = lexicon.lookup(tok)
-#         self.lex_pos = list(set([l.pos for l in self.lex_words]))
-#
-#
-# def test(sentence):
-#     doc = nlp(sentence)
-#     for d in doc:
-#         print(LexicalInfo(d).verbose())

@@ -127,7 +127,7 @@ class tripsparser:
             import os
             tbp = os.environ.get("TRIPS_BASE_PATH")
             if not tbp:
-                os.environ.get("TRIPS_BASE")
+                tbp = os.environ.get("TRIPS_BASE")
             if not tbp:
                 raise FileNotFoundError("Please point $TRIPS_BASE_PATH to your local copy of TRIPS")
             self.trips_base = tbp

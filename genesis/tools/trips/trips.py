@@ -13,7 +13,7 @@ if TRIPSPATH is None:
         "Please point $TRIPS_BASE_PATH to your local copy of TRIPS"
     )
 
-lexpath=tripsXMLPath
+lexpath=TRIPSXMLPATH
 
 if TRIPSXMLPATH is None:
     print("$tripsXMLPath is not set.  Defaulting to $TRIPS_BASE_PATH.  This will not work if TRIPS is not compiled", file=sys.stderr)

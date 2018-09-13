@@ -3,15 +3,22 @@ from diesel.ontology import load_ontology
 
 import os
 import math
+import sys
 
 TRIPSPATH = os.environ.get("TRIPS_BASE_PATH", None)
+TRIPSXMLPATH = os.environ.get("tripsXMLPath", None)
 
 if TRIPSPATH is None:
     raise FileNotFoundError(
         "Please point $TRIPS_BASE_PATH to your local copy of TRIPS"
     )
 
-lexpath = os.path.join(TRIPSPATH, "etc", "XMLTrips", "lexicon", "data")
+lexpath=tripsXMLPath
+
+if TRIPSXMLPATH is None:
+    print("$tripsXMLPath is not set.  Defaulting to $TRIPS_BASE_PATH.  This will not work if TRIPS is not compiled", file=sys.stderr)
+    lexpath=os.path.join(TRIPSPATH, "etc", "XMLTrips", "lexicon", "data")
+
 templpath = os.path.join(TRIPSPATH, "src", "LexiconManager", "Data", "templates")
 
 

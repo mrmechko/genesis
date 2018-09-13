@@ -4,7 +4,7 @@ from setuptools.command.install import install
 if __name__ == '__main__':
     setup(
             name='genesis',
-            version='0.2.3',
+            version='0.3.0',
             packages=find_packages(exclude=['test']),
             install_requires=[
                 'spacy==1.7.0',

@@ -13,9 +13,9 @@ if TRIPSPATH is None:
         "Please point $TRIPS_BASE_PATH to your local copy of TRIPS"
     )
 
-lexpath=TRIPSXMLPATH
-
-if TRIPSXMLPATH is None:
+if TRIPSXMLPATH:
+    lexpath=os.path.join(TRIPSXMLPATH, "lexicon", "data")
+else:
     print("$tripsXMLPath is not set.  Defaulting to $TRIPS_BASE_PATH.  This will not work if TRIPS is not compiled", file=sys.stderr)
     lexpath=os.path.join(TRIPSPATH, "etc", "XMLTrips", "lexicon", "data")
 

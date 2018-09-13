@@ -7,6 +7,12 @@ export TRIPS_BASE_PATH=[path to your local trips files (doesn't need to be compi
 
 # basic running
 
+ensure [spacy](http://spacy.io) models are installed using 
+```
+# en-core-web-sm==1.2.0
+python3 -m spacy download en
+```
+
 ```
 from genesis.tools.trips import ontology as ont
 from genesis.tools.spacy import nlp

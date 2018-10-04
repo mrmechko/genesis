@@ -11,6 +11,11 @@ ensure [spacy](http://spacy.io) models are installed using
 ```
 # en-core-web-sm==1.2.0
 python3 -m spacy download en
+
+# or
+
+python3 -m spacy download en_core_web_lg
+echo "export SPACY_MODEL=en_core_web_lg" >> ~/.bash_profile # genesis will try to load the model described here and default to en
 ```
 
 ```

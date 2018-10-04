@@ -1,7 +1,12 @@
 import spacy
 import copy
+import os
+from sys import stderr
 
-nlp = spacy.load('en')
+SPACY_MODEL = os.environ.get("SPACY_MODEL", 'en')
+print("using spacy model", SPACY_MODEL, file=stderr)
+
+nlp = spacy.load(SPACY_MODEL)
 
 tag_map = nlp.vocab.morphology.tag_map
 

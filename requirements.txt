@@ -1,4 +1,4 @@
-spacy==1.7.0
+spacy==2.0.12
 git+https://github.com/mrmechko/tripsmodule@v1.1.0
 git+https://github.com/mrmechko/diesel-python
 progressbar2==3.16.0

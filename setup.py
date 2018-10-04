@@ -7,7 +7,7 @@ if __name__ == '__main__':
             version='0.5.0',
             packages=find_packages(exclude=['test']),
             install_requires=[
-                'spacy==1.7.0',
+                'spacy==2.0.12',
                 'progressbar2==3.16.0'
                 ],
             dependency_links=[

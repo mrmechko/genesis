@@ -3,8 +3,12 @@ from .trips import lexicon, ontology
 from .symbols import get_pos, guess_cat
 
 from nltk.corpus import stopwords
+from collections import defaultdict
 
 sw_en = set(stopwords.words('english'))
+
+CACHE_WORDNET = defaultdict(lambda: defaultdict(list))
+CACHE_LEXICON = defaultdict(lambda: defaultdict(list))
 
 
 def normalize_spacy_to_trips(token):
@@ -13,9 +17,26 @@ def normalize_spacy_to_trips(token):
         token = token.replace(c[0], c[1])
     return token
 
+def lookup_lexicon_type(token, pos):
+    if not token in CACHE_LEXICON[pos]:
+        res = lexicon.lookup(token, pos)
+        CACHE_LEXICON[pos][token] = res[:]
+    return CACHE_LEXICON[pos][token][:]
 
-def lookup_token_from_lexicon(token, surrogate=None):
-    ds = deep_syntax(token)
+def lookup_wordnet_type(token, pos, wndepth=3):
+    if token not in CACHE_WORDNET[pos]:
+        CACHE_WORDNET[pos][token] = [
+            n for n in ontology.lookup(
+                token, max_depth=wndepth,
+                wordnet_only=True, pos=pos, with_hierarchy=True
+                )
+        ]
+    return CACHE_WORDNET[pos][token][:]
+
+def lookup_token_from_lexicon(token, surrogate=None, syntax=None):
+    ds = syntax
+    if not syntax:
+        ds = deep_syntax(token)
     tok = normalize_spacy_to_trips(token.text.lower())
     g_cat = guess_cat(tok, ds)
     g_pos = get_pos(tok, ds)
@@ -27,7 +48,7 @@ def lookup_token_from_lexicon(token, surrogate=None):
     if g_pos:
         words = []
         for p in g_pos:
-            words.extend(lexicon.lookup(tok, p))
+            words.extend(lookup_lex_type(token, pos))
     else:
         words = lexicon.lookup(tok)
     collected = []
@@ -44,8 +65,10 @@ def lookup_token_from_lexicon(token, surrogate=None):
     return collected
 
 
-def lookup_token_from_wordnet(token, wndepth=3):
-    ds = deep_syntax(token)
+def lookup_token_from_wordnet(token, wndepth=3, syntax=None):
+    ds = syntax
+    if not syntax:
+        ds = deep_syntax(token)
     tok = normalize_spacy_to_trips(token.text.lower())
     g_pos = get_pos(token, ds)
     g_pos = [p for p in g_pos if p in {"n", "v", "adj", "adv"}]
@@ -53,7 +76,7 @@ def lookup_token_from_wordnet(token, wndepth=3):
         return []
     collected = []
     for p in g_pos:
-        ots = [n for n in ontology.lookup(tok, max_depth=wndepth, wordnet_only=True, pos=p, with_hierarchy=True)]
+        ots = lookup_wordnet_type(tok, p)
         for t in ots:
             for t_ in t[0]:
                 collected.append(WNLexItem(token, t_, p, t[1]))
@@ -61,8 +84,9 @@ def lookup_token_from_wordnet(token, wndepth=3):
 
 
 def lookup_all(token, types_only=False, wndepth=3):
-    lex = lookup_token_from_lexicon(token)
-    wnl = lookup_token_from_wordnet(token, wndepth=wndepth)
+    syntax = deep_syntax(token)
+    lex = lookup_token_from_lexicon(token, syntax=syntax)
+    wnl = lookup_token_from_wordnet(token, wndepth=wndepth, syntax=syntax)
     if len(lex) + len(wnl) == 0:
         wnl = lookup_token_from_wordnet(token, wndepth=-1)
     wnl = WNLexItem.collect(wnl)
@@ -72,6 +96,17 @@ def lookup_all(token, types_only=False, wndepth=3):
         return set(lex + wnl)
     return lex, wnl
 
+def lookup_types(token, pos=None, wndepth=3):
+    if not pos:
+        pos = get_pos(token, deep_syntax(token))
+    token = normalize_spacy_to_trips(token.text.lower())
+    if pos:
+        pos = pos[0]
+        return (lookup_lexicon_type(token, pos), lookup_wordnet_type(token, pos))
+
+def lookup_types_sentence(sentence):
+    sentence = nlp(sentence)
+    return zip(sentence, [lookup_types(t) for t in sentence])
 
 def transform(sentence, wndepth=3):
     sent = nlp(sentence)
@@ -96,7 +131,6 @@ def transform(sentence, wndepth=3):
         else:
             res.append(s.text)
     return " ".join(res)
-
 
 
 class LexItem:
@@ -181,4 +215,3 @@ class WNLexItem:
 
     def __repr__(self):
         return "wn:"+str(self)
-

@@ -11,7 +11,7 @@ if __name__ == '__main__':
                 'progressbar2==3.16.0'
                 ],
             dependency_links=[
-                "git+https://github.com/mrmechko/tripsmodule@v1.1.0",
+                "git+https://github.com/mrmechko/tripsmodule",
                 "git+https://github.com/mrmechko/diesel-python"
                 ]
             )

@@ -32,7 +32,7 @@ def lookup_wordnet_type(token, pos, wndepth=3):
                 wordnet_only=True, pos=pos, with_hierarchy=True
                 )
         ]
-    return CACHE_WORDNET[pos][token]
+    return CACHE_WORDNET[pos][token][:]
 
 def lookup_token_from_lexicon(token, surrogate=None, syntax=None):
     ds = syntax
@@ -117,7 +117,7 @@ def lookup_types(token, pos=None, wndepth=3):
         if token not in BIG_CACHE[pos]:
             res = (lookup_lexicon_type(token, pos), lookup_wordnet_type(token, pos))
             BIG_CACHE[pos][token] = extract_types(res)
-        return BIG_CACHE[pos][token][:]
+        return BIG_CACHE[pos][token]
     return []
 
 def lookup_types_sentence(sentence):

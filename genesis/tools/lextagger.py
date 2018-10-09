@@ -32,7 +32,7 @@ def lookup_wordnet_type(token, pos, wndepth=3):
                 wordnet_only=True, pos=pos, with_hierarchy=True
                 )
         ]
-    return CACHE_WORDNET[pos][token][:]
+    return CACHE_WORDNET[pos][token]
 
 def lookup_token_from_lexicon(token, surrogate=None, syntax=None):
     ds = syntax

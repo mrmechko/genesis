@@ -21,7 +21,9 @@ def normalize_spacy_to_trips(token):
 def lookup_lexicon_type(token, pos):
     if not token in CACHE_LEXICON[pos]:
         res = lexicon.lookup(token, pos)
-        CACHE_LEXICON[pos][token] = res[:]
+        types = [ontology.get(x.onttype) for x in res.lexclasses]
+        types = set([t for t in types if t])
+        CACHE_LEXICON[pos][token] = types
     return CACHE_LEXICON[pos][token][:]
 
 def lookup_wordnet_type(token, pos, wndepth=3):
@@ -118,7 +120,7 @@ def lookup_types(token, pos=None, wndepth=3):
             res = (lookup_lexicon_type(token, pos), lookup_wordnet_type(token, pos))
             BIG_CACHE[pos][token] = extract_types(res)
         return BIG_CACHE[pos][token]
-    return []
+    return set()]
 
 def lookup_types_sentence(sentence):
     sentence = nlp(sentence)

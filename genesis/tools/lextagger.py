@@ -120,7 +120,7 @@ def lookup_types(token, pos=None, wndepth=3):
             res = (lookup_lexicon_type(token, pos), lookup_wordnet_type(token, pos))
             BIG_CACHE[pos][token] = extract_types(res)
         return BIG_CACHE[pos][token]
-    return set()]
+    return set()
 
 def lookup_types_sentence(sentence):
     sentence = nlp(sentence)

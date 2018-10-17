@@ -102,16 +102,6 @@ def lookup_all(token, types_only=False, wndepth=3):
         return set(lex + wnl)
     return lex, wnl
 
-
-def extract_types(res):
-    """WN are returned as [([types], [wn]) ...]"""
-    lex, wn = res
-    wn = [r[0] for r in wn]
-    res = set(lex)
-    for w in wn:
-        res.update(w)
-    return res
-
 def transform(sentence, wndepth=3):
     sent = nlp(sentence)
     res = []

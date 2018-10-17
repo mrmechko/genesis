@@ -4,6 +4,16 @@ from .lextagger import normalize_spacy_to_trips, lookup_lexicon_type, lookup_wor
 
 from .lextagger import BIG_CACHE
 
+
+def extract_types(res):
+    """WN are returned as [([types], [wn]) ...]"""
+    lex, wn = res
+    wn = [r[0] for r in wn]
+    res = set(lex)
+    for w in wn:
+        res.update(w)
+    return res
+
 def lookup_types(token, pos=None, wndepth=3):
     if not pos:
         pos = get_pos(token, deep_syntax(token))

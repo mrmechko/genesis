@@ -2,6 +2,8 @@ from .symbols import get_pos
 from .spacy import deep_syntax, nlp
 from .lextagger import normalize_spacy_to_trips, lookup_lexicon_type, lookup_wordnet_type
 
+from .lextagger import BIG_CACHE
+
 def lookup_types(token, pos=None, wndepth=3):
     if not pos:
         pos = get_pos(token, deep_syntax(token))
